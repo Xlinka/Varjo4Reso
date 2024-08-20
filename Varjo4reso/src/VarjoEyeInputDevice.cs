@@ -40,7 +40,6 @@ namespace Varjo4Reso
 
             var gazeSmoothing = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.gazeSmoothing);
             var gazeSensitivity = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.gazeSensitivity);
-            var pupilDilationSpeed = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.pupilDilationSpeed);
             var pupilSizeMultiplier = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.pupilSizeMultiplier);
 
             var leftPupil = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.useLegacyPupilDilation) ?

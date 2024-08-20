@@ -1,13 +1,13 @@
 ﻿using ResoniteModLoader;
 using System.Runtime.InteropServices;
 using System;
+using System.Diagnostics;
 
 namespace Varjo4Reso
 {
     class HookProc
     {
         private const uint PAGE_EXECUTE_READWRITE = 0x40;
-
         private const int GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS = 0x00000004;
         private const int GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT = 0x00000002;
 
@@ -18,16 +18,27 @@ namespace Varjo4Reso
 
         public static void HookGetCurrentProcessId()
         {
-            IntPtr kernel32Handle = GetModuleHandle("kernel32.dll");
-            IntPtr procAddress = GetProcAddress(kernel32Handle, "GetCurrentProcessId");
+            try
+            {
+                IntPtr kernel32Handle = GetModuleHandle("kernel32.dll");
+                if (kernel32Handle == IntPtr.Zero) throw new Exception("Failed to get handle for kernel32.dll.");
 
-            originalGetCurrentProcessId = Marshal.GetDelegateForFunctionPointer<GetCurrentProcessIdDelegate>(procAddress);
+                IntPtr procAddress = GetProcAddress(kernel32Handle, "GetCurrentProcessId");
+                if (procAddress == IntPtr.Zero) throw new Exception("Failed to get address for GetCurrentProcessId.");
 
-            VirtualProtect(procAddress, (uint)IntPtr.Size, PAGE_EXECUTE_READWRITE, out uint oldProtect);
-            
-            Marshal.WriteIntPtr(procAddress, Marshal.GetFunctionPointerForDelegate(new GetCurrentProcessIdDelegate(GetCurrentProcessId_Hook)));
-            //add back the memory protection.
-            VirtualProtect(procAddress, (uint)IntPtr.Size, oldProtect, out _);
+                originalGetCurrentProcessId = Marshal.GetDelegateForFunctionPointer<GetCurrentProcessIdDelegate>(procAddress);
+
+                VirtualProtect(procAddress, (uint)IntPtr.Size, PAGE_EXECUTE_READWRITE, out uint oldProtect);
+
+                Marshal.WriteIntPtr(procAddress, Marshal.GetFunctionPointerForDelegate(new GetCurrentProcessIdDelegate(GetCurrentProcessId_Hook)));
+
+                // Restore the original memory protection
+                VirtualProtect(procAddress, (uint)IntPtr.Size, oldProtect, out _);
+            }
+            catch (Exception ex)
+            {
+                ResoniteMod.Error($"Error during hooking: {ex.Message}");
+            }
         }
 
         private static uint GetCurrentProcessId_Hook()
@@ -42,7 +53,7 @@ namespace Varjo4Reso
 
                 if (callerModule == libVarjo || callerModule == libVarjoRuntime)
                 {
-                    ResoniteMod.Warn("Hijacked Varjo's process ID call! All good");
+                    ResoniteMod.Warn("Hijacked Varjo's process ID");
                     return originalGetCurrentProcessId() + 42;
                 }
             }
@@ -72,8 +83,8 @@ namespace Varjo4Reso
 
         private static IntPtr GetReturnAddress()
         {
-            
-            throw new NotImplementedException("Return address retrieval logic needed here.");
+            StackFrame frame = new StackFrame(1, true); 
+            return frame.GetMethod().MethodHandle.GetFunctionPointer();
         }
 
         #endregion
