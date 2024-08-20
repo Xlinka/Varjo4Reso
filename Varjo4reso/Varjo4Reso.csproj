@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<TargetFramework>net472</TargetFramework>
+		<RootNamespace>Varjo4Reso</RootNamespace>
+		<AssemblyName>Varjo4Reso</AssemblyName>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<ResonitePath>$(MSBuildThisFileDirectory)Resonite\</ResonitePath>
+		<ResonitePath Condition="Exists('C:\Program Files (x86)\Steam\steamapps\common\Resonite\')">C:\Program Files (x86)\Steam\steamapps\common\Resonite\</ResonitePath>
+		<ResonitePath Condition="Exists('$(HOME)/.steam/steam/steamapps/common/Resonite/')">$(HOME)/.steam/steam/steamapps/common/Resonite/</ResonitePath>
+		<ResonitePath Condition="Exists('/mnt/LocalDisk2/SteamLibrary/steamapps/common/Resonite/')">/mnt/LocalDisk2/SteamLibrary/steamapps/common/Resonite/</ResonitePath>
+		<ResonitePath Condition="Exists('G:\SteamLibrary\steamapps\common\Resonite\')">G:\SteamLibrary\steamapps\common\Resonite\</ResonitePath>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Reference Include="Elements.Core">
+			<HintPath>$(ResonitePath)Resonite_Data/Managed/Elements.Core.dll</HintPath>
+		</Reference>
+		<Reference Include="FrooxEngine">
+			<HintPath>$(ResonitePath)Resonite_Data/Managed/FrooxEngine.dll</HintPath>
+		</Reference>
+		<Reference Include="0Harmony">
+			<HintPath>$(ResonitePath)rml_libs/0Harmony.dll</HintPath>
+		</Reference>
+		<Reference Include="ResoniteModLoader">
+			<HintPath>$(ResonitePath)Libraries/ResoniteModLoader.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="VarjoLib.dll">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
+</Project>
