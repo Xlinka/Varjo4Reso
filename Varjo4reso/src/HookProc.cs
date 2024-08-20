@@ -24,9 +24,9 @@ namespace Varjo4Reso
             originalGetCurrentProcessId = Marshal.GetDelegateForFunctionPointer<GetCurrentProcessIdDelegate>(procAddress);
 
             VirtualProtect(procAddress, (uint)IntPtr.Size, PAGE_EXECUTE_READWRITE, out uint oldProtect);
-
+            
             Marshal.WriteIntPtr(procAddress, Marshal.GetFunctionPointerForDelegate(new GetCurrentProcessIdDelegate(GetCurrentProcessId_Hook)));
-
+            //add back the memory protection.
             VirtualProtect(procAddress, (uint)IntPtr.Size, oldProtect, out _);
         }
 

@@ -43,6 +43,17 @@ namespace Varjo4Reso
         [AutoRegisterConfigKey]
         public readonly static ModConfigurationKey<float> minPupilSize = new ModConfigurationKey<float>("min_Pupil_Size", "Minimum Pupil Size", () => 0.003f);
 
+        [AutoRegisterConfigKey]
+        public readonly static ModConfigurationKey<float> gazeSmoothing = new ModConfigurationKey<float>("gaze_smoothing", "Gaze Smoothing Factor", () => 0.5f);
+
+        [AutoRegisterConfigKey]
+        public readonly static ModConfigurationKey<float> gazeSensitivity = new ModConfigurationKey<float>("gaze_sensitivity", "Gaze Sensitivity", () => 1.0f);
+
+        [AutoRegisterConfigKey]
+        public readonly static ModConfigurationKey<float> pupilSizeMultiplier = new ModConfigurationKey<float>("pupil_size_multiplier", "Pupil Size Multiplier", () => 1.0f);
+
+        
+
         public static ModConfiguration config;
         public static VarjoNativeInterface tracker;  
 

@@ -33,17 +33,23 @@ namespace Varjo4Reso
 
         public void UpdateInputs(float deltaTime)
         {
-            VarjoNativeInterface tracker = VarjoEyeIntegration.tracker; 
+            VarjoNativeInterface tracker = VarjoEyeIntegration.tracker;
             tracker.Update();
             var gazeData = tracker.GetGazeData();
             var eyeData = tracker.GetEyeMeasurements();
 
+            var gazeSmoothing = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.gazeSmoothing);
+            var gazeSensitivity = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.gazeSensitivity);
+            var pupilDilationSpeed = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.pupilDilationSpeed);
+            var pupilSizeMultiplier = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.pupilSizeMultiplier);
+
             var leftPupil = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.useLegacyPupilDilation) ?
-                (float)(gazeData.leftPupilSize * VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.userPupilScale)) :
-                eyeData.leftPupilDiameterInMM * 0.001f;
+                (float)(gazeData.leftPupilSize * VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.userPupilScale) * pupilSizeMultiplier) :
+                eyeData.leftPupilDiameterInMM * 0.001f * pupilSizeMultiplier;
+
             var rightPupil = VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.useLegacyPupilDilation) ?
-                (float)(gazeData.rightPupilSize * VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.userPupilScale)) :
-                eyeData.rightPupilDiameterInMM * 0.001f;
+                (float)(gazeData.rightPupilSize * VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.userPupilScale) * pupilSizeMultiplier) :
+                eyeData.rightPupilDiameterInMM * 0.001f * pupilSizeMultiplier;
 
             if (VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.useLegacyBlinkDetection))
             {
@@ -51,13 +57,13 @@ namespace Varjo4Reso
                     gazeData.leftStatus == GazeEyeStatus.Tracked ? VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.fullOpenState) : (
                     gazeData.leftStatus == GazeEyeStatus.Compensated ? VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.halfOpenState) : (
                     gazeData.leftStatus == GazeEyeStatus.Visible ? VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.quarterOpenState)
-                    : VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.closedState))); 
+                    : VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.closedState)));
 
                 var rightOpen =
                     gazeData.rightStatus == GazeEyeStatus.Tracked ? VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.fullOpenState) : (
                     gazeData.rightStatus == GazeEyeStatus.Compensated ? VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.halfOpenState) : (
                     gazeData.rightStatus == GazeEyeStatus.Visible ? VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.quarterOpenState)
-                    : VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.closedState))); 
+                    : VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.closedState)));
 
                 if (VarjoEyeIntegration.config.GetValue(VarjoEyeIntegration.blinkSmoothing))
                 {
@@ -112,14 +118,14 @@ namespace Varjo4Reso
 
             eyes.IsEyeTrackingActive = Engine.Current.InputInterface.VR_Active;
 
-            UpdateEye(in gazeData.leftEye, in leftStatus, in leftPupil, _leftOpen, deltaTime, eyes.LeftEye);
-            UpdateEye(in gazeData.rightEye, in rightStatus, in rightPupil, _rightOpen, deltaTime, eyes.RightEye);
+            UpdateEye(in gazeData.leftEye, in leftStatus, in leftPupil, _leftOpen, deltaTime, eyes.LeftEye, gazeSensitivity, gazeSmoothing);
+            UpdateEye(in gazeData.rightEye, in rightStatus, in rightPupil, _rightOpen, deltaTime, eyes.RightEye, gazeSensitivity, gazeSmoothing);
 
             bool combinedStatus = gazeData.status == GazeStatus.Valid;
             float combinedPupil = MathX.Average(leftPupil, rightPupil);
             float combinedOpen = MathX.Average(eyes.LeftEye.Openness, eyes.RightEye.Openness);
 
-            UpdateEye(in gazeData.gaze, in combinedStatus, in combinedPupil, in combinedOpen, in deltaTime, eyes.CombinedEye);
+            UpdateEye(in gazeData.gaze, in combinedStatus, in combinedPupil, in combinedOpen, in deltaTime, eyes.CombinedEye, gazeSensitivity, gazeSmoothing);
 
             eyes.ComputeCombinedEyeParameters();
 
@@ -131,16 +137,22 @@ namespace Varjo4Reso
             eyes.FinishUpdate();
         }
 
-        private void UpdateEye(in GazeRay data, in bool status, in float pupilSize, in float openness, in float deltaTime, Eye eye)
+        private void UpdateEye(in GazeRay data, in bool status, in float pupilSize, in float openness, in float deltaTime, Eye eye, float gazeSensitivity, float gazeSmoothing)
         {
             eye.IsDeviceActive = Engine.Current.InputInterface.VR_Active;
             eye.IsTracking = status;
 
             if (eye.IsTracking)
             {
-                eye.UpdateWithDirection((float3)new double3(data.forward.x,
+                var direction = (float3)new double3(data.forward.x,
                     data.forward.y,
-                    data.forward.z).Normalized);
+                    data.forward.z).Normalized;
+
+                // Apply gaze sensitivity and smoothing
+                direction *= gazeSensitivity;
+                direction = MathX.Lerp(eye.Direction, direction, gazeSmoothing * deltaTime);
+
+                eye.UpdateWithDirection(direction);
 
                 eye.RawPosition = (float3)new double3(data.origin.x,
                     data.origin.y,
